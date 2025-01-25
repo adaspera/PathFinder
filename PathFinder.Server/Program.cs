@@ -1,3 +1,7 @@
+using System.Net.Http.Headers;
+using PathFinder.Server.Services;
+using PathFinder.Server.Utils;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -5,8 +9,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
-
 
 builder.Services.AddCors(options =>
 {
@@ -17,6 +19,29 @@ builder.Services.AddCors(options =>
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });
+});
+
+builder.Services.AddHttpClient<MobilityDbTokenService>((client) =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["MobilityDb:BaseUrl"]);
+});
+
+builder.Services.AddSingleton<MobilityDbTokenService>(sp =>
+{
+    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+    var httpClient = httpClientFactory.CreateClient(nameof(MobilityDbTokenService));
+    var refreshToken = sp.GetRequiredService<IConfiguration>()["MobilityDb:RefreshToken"];
+    return new MobilityDbTokenService(httpClient, refreshToken);
+});
+
+
+builder.Services.AddHttpClient<MobilityDbService>((client) =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["MobilityDb:BaseUrl"]);
+}).AddHttpMessageHandler(serviceProvider =>
+{
+    var tokenService = serviceProvider.GetRequiredService<MobilityDbTokenService>();
+    return new TokenRefreshHandler(tokenService);
 });
 
 var app = builder.Build();
