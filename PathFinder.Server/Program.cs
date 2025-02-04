@@ -21,17 +21,15 @@ builder.Services.AddCors(options =>
         });
 });
 
-builder.Services.AddHttpClient<MobilityDbTokenService>((client) =>
-{
-    client.BaseAddress = new Uri(builder.Configuration["MobilityDb:BaseUrl"]);
-});
-
+// Supper ugly (couldn't find better)
 builder.Services.AddSingleton<MobilityDbTokenService>(sp =>
 {
     var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
     var httpClient = httpClientFactory.CreateClient(nameof(MobilityDbTokenService));
-    var refreshToken = sp.GetRequiredService<IConfiguration>()["MobilityDb:RefreshToken"];
-    return new MobilityDbTokenService(httpClient, refreshToken);
+    httpClient.BaseAddress = new Uri(builder.Configuration["MobilityDb:BaseUrl"]);
+    var refreshToken = builder.Configuration["MobilityDb:RefreshToken"];
+    var logger = sp.GetRequiredService<ILogger<MobilityDbTokenService>>();
+    return new MobilityDbTokenService(httpClient, refreshToken, logger);
 });
 
 

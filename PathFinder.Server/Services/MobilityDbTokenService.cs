@@ -1,4 +1,7 @@
-﻿namespace PathFinder.Server.Services;
+﻿using System.Text.Json.Serialization;
+using PathFinder.Server.Models.DTOs;
+
+namespace PathFinder.Server.Services;
 
     public class MobilityDbTokenService
     {
@@ -8,10 +11,13 @@
         private string _refreshToken;
         private DateTime _expirationUtc;
 
-        public MobilityDbTokenService(HttpClient httpClient, string refreshToken)
+        private readonly ILogger<MobilityDbTokenService> _logger;
+
+        public MobilityDbTokenService(HttpClient httpClient, string refreshToken, ILogger<MobilityDbTokenService> logger)
         {
             _refreshToken = refreshToken;
             _httpClient = httpClient;
+            _logger = logger;
         }
 
         public async Task<string> GetAccessTokenAsync()
@@ -52,7 +58,7 @@
 
                 response.EnsureSuccessStatusCode();
 
-                var responseData = await response.Content.ReadFromJsonAsync<RefreshTokenResponse>();
+                var responseData = await response.Content.ReadFromJsonAsync<RefreshTokenResponseDTO>();
                 if (responseData == null)
                 {
                     throw new ApplicationException("Invalid response received from the server.");
@@ -64,13 +70,5 @@
             {
                 throw new ApplicationException("Error refreshing access token from MobilityDb API", ex);
             }
-        }
-
-        // DTO for the refresh token response
-        private class RefreshTokenResponse
-        {
-            public string AccessToken { get; set; }
-            public DateTime ExpirationDateTimeUtc { get; set; }
-            public string TokenType { get; set; }
         }
     }
