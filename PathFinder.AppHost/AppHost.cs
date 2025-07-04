@@ -18,8 +18,20 @@ try
 
     var builder = (DistributedApplicationBuilder)DistributedApplication.CreateBuilder(args);
     
+    var postgres = builder.AddPostgres("postgres")
+        .WithDataVolume()
+        .WithPgWeb();
+
+    var postgresdb = postgres.AddDatabase("postgresdb");
+    
     builder.Services.AddSerilog();
-    builder.AddProject<Projects.Pathfinder_Server>("api");
+
+    builder.AddProject<Projects.Pathfinder_Server>("api")
+        .WithReference(postgresdb);
+    
+    builder.AddProject<Projects.Pathfinder_MigrationService>("migrations")
+        .WithReference(postgresdb);
+    
     builder.AddNpmApp("reactvite", "../PathFinder.client");
 
     Log.Information("Building and running the application");

@@ -1,4 +1,7 @@
 using System.Net.Http.Headers;
+using PathFinder.Server.Data;
+using PathFinder.Server.Repositories;
+using PathFinder.Server.Repositories.Interfaces;
 using PathFinder.Server.Services;
 using PathFinder.Server.Utils;
 using Serilog;
@@ -16,6 +19,10 @@ try
         .CreateLogger();
     
     var builder = WebApplication.CreateBuilder(args);
+    
+    builder.AddNpgsqlDbContext<AppDbContext>(connectionName: "postgresdb");
+    
+    builder.Services.AddScoped<IStopRepository, StopRepository>();
 
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();

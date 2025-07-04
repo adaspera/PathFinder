@@ -18,7 +18,7 @@ public class TestController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> TestGet()
     {
-        var res = await _mobilityDbService.GetFeedInfoAsync("1");
+        var res = await _mobilityDbService.GetAllFeedsAsync();
         return Ok(res);
     } 
     
@@ -27,5 +27,35 @@ public class TestController : ControllerBase
     {
         var res = await _mobilityDbService.GetMetadata();
         return Ok(res);
-    } 
+    }
+
+    [HttpGet("GetFeedInfoById")]
+    public async Task<IActionResult> TestGetFeedInfoById(string feedId)
+    {
+        try
+        {
+            var var = await _mobilityDbService.GetGtfsFeedDownloadUrlAsync(feedId);
+            return Ok(var);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    [HttpGet("GetFeedById")]
+    public async Task<IActionResult> TestGetFeedById(string feedId)
+    {
+        try
+        {
+            await _mobilityDbService.DownloadGtfsFeedAsync(feedId);
+            return Ok();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
 }
