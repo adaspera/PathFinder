@@ -1,5 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 using PathFinder.Server.Models.DTOs;
+using Serilog;
 
 namespace PathFinder.Server.Services;
 
@@ -11,13 +12,11 @@ namespace PathFinder.Server.Services;
         private string _refreshToken;
         private DateTime _expirationUtc;
 
-        private readonly ILogger<MobilityDbTokenService> _logger;
 
-        public MobilityDbTokenService(HttpClient httpClient, string refreshToken, ILogger<MobilityDbTokenService> logger)
+        public MobilityDbTokenService(HttpClient httpClient, string refreshToken)
         {
             _refreshToken = refreshToken;
             _httpClient = httpClient;
-            _logger = logger;
         }
 
         public async Task<string> GetAccessTokenAsync()
@@ -26,6 +25,7 @@ namespace PathFinder.Server.Services;
             {
                 return _accessToken;
             }
+            Log.Information("Access token expired");
 
             await _semaphore.WaitAsync();
             try
@@ -50,6 +50,7 @@ namespace PathFinder.Server.Services;
 
         private async Task<(string AccessToken, DateTime ExpirationUtc)> RefreshAccessTokenAsync()
         {
+            Log.Information("Refreshing token");
             try
             {
                 var requestBody = new { refresh_token = _refreshToken };
@@ -61,14 +62,15 @@ namespace PathFinder.Server.Services;
                 var responseData = await response.Content.ReadFromJsonAsync<RefreshTokenResponseDTO>();
                 if (responseData == null)
                 {
-                    throw new ApplicationException("Invalid response received from the server.");
+                    throw new ApplicationException("Invalid response received from the MobilityDb server.");
                 }
 
                 return (responseData.AccessToken, responseData.ExpirationDateTimeUtc);
             }
             catch (HttpRequestException ex)
             {
-                throw new ApplicationException("Error refreshing access token from MobilityDb API", ex);
+                Log.Error(ex, "Error refreshing access token from MobilityDb API");
+                throw;
             }
         }
     }
