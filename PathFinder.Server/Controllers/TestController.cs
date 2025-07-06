@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using PathFinder.Server.Services;
+using Serilog;
 
 namespace PathFinder.Server.Controllers;
 
@@ -54,8 +55,8 @@ public class TestController : ControllerBase
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            throw;
+            Log.Error(e.Message);
+            return BadRequest(e.Message);
         }
     }
 }

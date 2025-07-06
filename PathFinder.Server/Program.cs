@@ -59,9 +59,7 @@ try
     });
 
     var app = builder.Build();
-
-    app.UseDefaultFiles();
-    app.UseStaticFiles();
+    
 
     if (app.Environment.IsDevelopment())
     {
@@ -76,9 +74,7 @@ try
     app.UseAuthorization();
 
     app.MapControllers();
-
-    app.MapFallbackToFile("/index.html");
-
+    
     app.Run();
 }
 catch (Exception ex)

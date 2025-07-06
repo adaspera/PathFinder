@@ -14,11 +14,13 @@ public class MobilityDbService
 {
     private readonly HttpClient _httpClient;
     private readonly IStopRepository _stopRepository;
+    private readonly IHttpClientFactory _httpClientFactory;
 
-    public MobilityDbService(HttpClient httpClient, IStopRepository stopRepository)
+    public MobilityDbService(HttpClient httpClient, IStopRepository stopRepository, IHttpClientFactory httpClientFactory)
     {
         _httpClient = httpClient;
         _stopRepository = stopRepository;
+        _httpClientFactory = httpClientFactory;
     }
     
     public async Task<object?> GetAllFeedsAsync()
@@ -45,13 +47,16 @@ public class MobilityDbService
     
     public async Task DownloadGtfsFeedAsync(string feedId)
     {
-        var gtfsUrl = await GetGtfsFeedDownloadUrlAsync(feedId);
+        var gtfsUrl= await GetGtfsFeedDownloadUrlAsync(feedId);
         if (gtfsUrl == null)
         {
             throw new Exception("GTFS feed URL not found");
         }
 
-        var response = await _httpClient.GetAsync(gtfsUrl);
+        var downloadClient = _httpClientFactory.CreateClient();
+        var response = await downloadClient.GetAsync(gtfsUrl);
+        response.EnsureSuccessStatusCode();
+        
         var zipBytes = await response.Content.ReadAsByteArrayAsync();
     
         using (var zipStream = new MemoryStream(zipBytes))
@@ -62,6 +67,12 @@ public class MobilityDbService
             using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
             {
                 var stops = csv.GetRecords<Stop>().ToList();
+                
+                foreach (var stop in stops)
+                {
+                    stop.FeedId = feedId;
+                }
+                
                 await _stopRepository.AddRangeAsync(stops);
                 await _stopRepository.SaveChangesAsync();
             }

@@ -30,7 +30,8 @@ try
         .WithReference(postgresdb);
     
     builder.AddProject<Projects.Pathfinder_MigrationService>("migrations")
-        .WithReference(postgresdb);
+        .WithReference(postgresdb)
+        .WaitFor(postgresdb);
     
     builder.AddNpmApp("reactvite", "../PathFinder.client");
 
