@@ -5,13 +5,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace PathFinder.Server.Models;
 
+[PrimaryKey(nameof(StopId), nameof(FeedId))]
 public class Stop
 {
-    [Key, Column(Order = 0)]
     [Name("stop_id")]
     public string StopId { get; set; } 
 
-    [Key, Column(Order = 1)]
     public string FeedId { get; set; }
 
     [Name("stop_name")]

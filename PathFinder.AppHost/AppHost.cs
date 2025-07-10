@@ -25,13 +25,16 @@ try
     var postgresdb = postgres.AddDatabase("postgresdb");
     
     builder.Services.AddSerilog();
-
-    builder.AddProject<Projects.Pathfinder_Server>("api")
-        .WithReference(postgresdb);
     
-    builder.AddProject<Projects.Pathfinder_MigrationService>("migrations")
+    var migrations = builder.AddProject<Projects.Pathfinder_MigrationService>("migrations")
         .WithReference(postgresdb)
         .WaitFor(postgresdb);
+
+    builder.AddProject<Projects.Pathfinder_Server>("api")
+        .WithReference(postgresdb)
+        .WithReference(migrations)
+        .WaitFor(migrations);
+    
     
     builder.AddNpmApp("reactvite", "../PathFinder.client");
 
