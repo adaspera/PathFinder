@@ -2,6 +2,7 @@
 using System.IO.Compression;
 using System.Text.Json.Serialization;
 using CsvHelper;
+using CsvHelper.Configuration;
 using PathFinder.Server.Models;
 using PathFinder.Server.Repositories;
 using PathFinder.Server.Repositories.Interfaces;
@@ -23,9 +24,9 @@ public class MobilityDbService
         _httpClientFactory = httpClientFactory;
     }
     
-    public async Task<object?> GetAllFeedsAsync()
+    public async Task<object?> GetAllFeedsAsync(int limit)
     {
-        return await _httpClient.GetFromJsonAsync<object>("v1/feeds?limit=10");
+        return await _httpClient.GetFromJsonAsync<object>($"v1/feeds?limit={limit}");
     }
 
     public async Task<object?> GetFeedInfoAsync(string feedId)
@@ -57,26 +58,54 @@ public class MobilityDbService
         var response = await downloadClient.GetAsync(gtfsUrl);
         response.EnsureSuccessStatusCode();
         
+        Log.Information("Feed with id: {feedId} downloaded successfully", feedId);
+        
         var zipBytes = await response.Content.ReadAsByteArrayAsync();
     
         using (var zipStream = new MemoryStream(zipBytes))
         using (var archive = new ZipArchive(zipStream))
         {
             var stopsEntry = archive.GetEntry("stops.txt");
-            using (var reader = new StreamReader(stopsEntry.Open()))
-            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
             {
-                var stops = csv.GetRecords<Stop>().ToList();
-                
-                foreach (var stop in stops)
-                {
-                    stop.FeedId = feedId;
-                }
+                HeaderValidated = null,
+                MissingFieldFound = null
+            };
+            using var reader = new StreamReader(stopsEntry.Open());
+            using var csv = new CsvReader(reader, csvConfig);
+            {
+                var stops = csv.GetRecords<Stop>()
+                    .Select(s => {
+                        s.FeedId = feedId;
+                        return s;
+                    })
+                    .ToList();
                 
                 await _stopRepository.AddRangeAsync(stops);
                 await _stopRepository.SaveChangesAsync();
+                
+                Log.Information("Imported {stopCount} stops for feed {feedId}", stops.Count, feedId);
             }
         }
+    }
+
+    public async Task<List<Stop>> GetStopsAsync(string feedId)
+    {
+        var stops = await _stopRepository.GetByFeedIdAsync(feedId);
+
+        if (!stops.Any())
+        {
+            await DownloadGtfsFeedAsync(feedId);
+            var stopsFresh = await _stopRepository.GetByFeedIdAsync(feedId);
+            
+            if (!stopsFresh.Any())
+            {
+                Log.Error("No stops found for feed {feedId}", feedId);
+            }
+            return stopsFresh;
+        }
+        
+        return stops;
     }
 
 }

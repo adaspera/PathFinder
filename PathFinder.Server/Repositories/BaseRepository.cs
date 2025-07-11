@@ -13,7 +13,6 @@ public class BaseRepository<T> : IBaseRepository<T> where T : class
     protected BaseRepository(AppDbContext db)
     {
         _context = db;
-        Log.Information("BaseRepository initialized for type {EntityType}", typeof(T).Name);
     }
 
     public T GetById<TId>(TId id)
