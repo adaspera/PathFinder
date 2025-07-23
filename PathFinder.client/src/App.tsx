@@ -1,15 +1,12 @@
 import React from 'react'
 import { MapContainer, TileLayer } from 'react-leaflet'
-import {Button, buttonVariants} from "@/components/ui/button.tsx";
-import {cn} from "@/lib/utils.ts";
+import {Button} from "@mui/material";
 
 const App: React.FC = () => {
-    console.log(cn(buttonVariants({})));
-
 
     return (
         <div style={{ height: '100vh', width: '80%' }}>
-            <Button className="bg-zinc-950">AAA</Button>
+            <Button>aaaaaaa</Button>
             <MapContainer
                 center={[51.505, -0.09]}
                 zoom={13}
