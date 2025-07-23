@@ -7,7 +7,7 @@ namespace PathFinder.Server.Repositories;
 
 public class StopRepository : BaseRepository<Stop>, IStopRepository
 {
-    AppDbContext _appDbContext;
+    private readonly AppDbContext _appDbContext;
     public StopRepository(AppDbContext db) : base(db)
     {
         _appDbContext = db;

@@ -59,19 +59,4 @@ public class TestController : ControllerBase
             return BadRequest(e.Message);
         }
     }
-    
-    [HttpGet("GetFeedStopsById")]
-    public async Task<IActionResult> TestGetFeedStopsById(string feedId)
-    {
-        try
-        {
-            var stops = await _mobilityDbService.GetStopsAsync(feedId);
-            return Ok(stops);
-        }
-        catch (Exception e)
-        {
-            Log.Error(e.Message);
-            return BadRequest(e.Message);
-        }
-    }
 }

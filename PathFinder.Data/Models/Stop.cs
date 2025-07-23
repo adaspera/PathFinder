@@ -5,20 +5,24 @@ using Microsoft.EntityFrameworkCore;
 
 namespace PathFinder.Server.Models;
 
-[PrimaryKey(nameof(StopId), nameof(FeedId))]
+[PrimaryKey(nameof(Id), nameof(FeedId))]
 public class Stop
 {
     [Name("stop_id")]
-    public string StopId { get; set; } 
+    public string Id { get; set; }
 
+    [Required]
     public string FeedId { get; set; }
 
     [Name("stop_name")]
-    public string StopName { get; set; }
+    public string? Name { get; set; }
 
     [Name("stop_lat")]
-    public double StopLat { get; set; }
+    public double? Latitude { get; set; }
 
     [Name("stop_lon")]
-    public double StopLon { get; set; }
+    public double? Longitude { get; set; }
+
+    [Name("zone_id")]
+    public string? ZoneId { get; set; }
 }

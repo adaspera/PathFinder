@@ -11,8 +11,8 @@ using PathFinder.Server.Data;
 namespace PathFinder.MigrationService.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250710163235_InitialMigration")]
-    partial class InitialMigration
+    [Migration("20250723122102_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -26,23 +26,25 @@ namespace PathFinder.MigrationService.Migrations
 
             modelBuilder.Entity("PathFinder.Server.Models.Stop", b =>
                 {
-                    b.Property<string>("StopId")
+                    b.Property<string>("Id")
                         .HasColumnType("text");
 
                     b.Property<string>("FeedId")
                         .HasColumnType("text");
 
-                    b.Property<double>("StopLat")
+                    b.Property<double?>("Latitude")
                         .HasColumnType("double precision");
 
-                    b.Property<double>("StopLon")
+                    b.Property<double?>("Longitude")
                         .HasColumnType("double precision");
 
-                    b.Property<string>("StopName")
-                        .IsRequired()
+                    b.Property<string>("Name")
                         .HasColumnType("text");
 
-                    b.HasKey("StopId", "FeedId");
+                    b.Property<string>("ZoneId")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id", "FeedId");
 
                     b.ToTable("Stops");
                 });

@@ -5,7 +5,7 @@
 namespace PathFinder.MigrationService.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialMigration : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -14,15 +14,16 @@ namespace PathFinder.MigrationService.Migrations
                 name: "Stops",
                 columns: table => new
                 {
-                    StopId = table.Column<string>(type: "text", nullable: false),
+                    Id = table.Column<string>(type: "text", nullable: false),
                     FeedId = table.Column<string>(type: "text", nullable: false),
-                    StopName = table.Column<string>(type: "text", nullable: false),
-                    StopLat = table.Column<double>(type: "double precision", nullable: false),
-                    StopLon = table.Column<double>(type: "double precision", nullable: false)
+                    Name = table.Column<string>(type: "text", nullable: true),
+                    Latitude = table.Column<double>(type: "double precision", nullable: true),
+                    Longitude = table.Column<double>(type: "double precision", nullable: true),
+                    ZoneId = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Stops", x => new { x.StopId, x.FeedId });
+                    table.PrimaryKey("PK_Stops", x => new { x.Id, x.FeedId });
                 });
         }
 

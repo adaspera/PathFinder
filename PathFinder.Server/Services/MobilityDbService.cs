@@ -3,10 +3,12 @@ using System.IO.Compression;
 using System.Text.Json.Serialization;
 using CsvHelper;
 using CsvHelper.Configuration;
+using PathFinder.Data.Schema;
 using PathFinder.Server.Models;
 using PathFinder.Server.Repositories;
 using PathFinder.Server.Repositories.Interfaces;
 using Serilog;
+using Route = Microsoft.AspNetCore.Routing.Route;
 
 namespace PathFinder.Server.Services;
 
@@ -15,12 +17,16 @@ public class MobilityDbService
 {
     private readonly HttpClient _httpClient;
     private readonly IStopRepository _stopRepository;
+    private readonly IRouteRepository _routeRepository;
     private readonly IHttpClientFactory _httpClientFactory;
 
-    public MobilityDbService(HttpClient httpClient, IStopRepository stopRepository, IHttpClientFactory httpClientFactory)
+    public MobilityDbService(HttpClient httpClient, IStopRepository stopRepository,
+        IRouteRepository routeRepository,
+        IHttpClientFactory httpClientFactory)
     {
         _httpClient = httpClient;
         _stopRepository = stopRepository;
+        _routeRepository = routeRepository;
         _httpClientFactory = httpClientFactory;
     }
     
@@ -61,66 +67,51 @@ public class MobilityDbService
         Log.Information("Feed with id: {feedId} downloaded successfully", feedId);
         
         var zipBytes = await response.Content.ReadAsByteArrayAsync();
-    
-        using (var zipStream = new MemoryStream(zipBytes))
-        using (var archive = new ZipArchive(zipStream))
-        {
-            var stopsEntry = archive.GetEntry("stops.txt");
-            var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
-            {
-                HeaderValidated = null,
-                MissingFieldFound = null
-            };
-            using var reader = new StreamReader(stopsEntry.Open());
-            using var csv = new CsvReader(reader, csvConfig);
-            {
-                var stops = csv.GetRecords<Stop>()
-                    .Select(s => {
-                        s.FeedId = feedId;
-                        return s;
-                    })
-                    .ToList();
-                
-                await _stopRepository.AddRangeAsync(stops);
-                await _stopRepository.SaveChangesAsync();
-                
-                Log.Information("Imported {stopCount} stops for feed {feedId}", stops.Count, feedId);
-            }
-        }
-    }
 
-    public async Task<List<Stop>> GetStopsAsync(string feedId)
-    {
-        var stops = await _stopRepository.GetByFeedIdAsync(feedId);
-
-        if (!stops.Any())
-        {
-            await DownloadGtfsFeedAsync(feedId);
-            var stopsFresh = await _stopRepository.GetByFeedIdAsync(feedId);
-            
-            if (!stopsFresh.Any())
-            {
-                Log.Error("No stops found for feed {feedId}", feedId);
-            }
-            return stopsFresh;
-        }
+        using var zipStream = new MemoryStream(zipBytes);
+        using var archive = new ZipArchive(zipStream);
         
-        return stops;
+        await ProcessGtfsFileAsync<Stop>(archive, "stops.txt", feedId, 
+            (stop, fid) => { stop.FeedId = fid; return stop; }, 
+            _stopRepository);
+        
+        await ProcessGtfsFileAsync<Models.Route>(archive, "routes.txt", feedId, 
+            (route, fid) => { route.FeedId = fid; return route; }, 
+            _routeRepository);
+    }
+    
+    private async Task ProcessGtfsFileAsync<T>(
+        ZipArchive archive,
+        string fileName,
+        string feedId,
+        Func<T, string, T> setFeedId,
+        IBaseRepository<T> repository) where T : class
+    {
+        var entry = archive.GetEntry(fileName);
+        if (entry == null)
+        {
+            Log.Warning("File {FileName} not found in GTFS feed", fileName);
+            return;
+        }
+
+        var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
+        {
+            HeaderValidated = null,
+            MissingFieldFound = null
+        };
+
+        using var reader = new StreamReader(entry.Open());
+        using var csv = new CsvReader(reader, csvConfig);
+
+        var records = csv.GetRecords<T>()
+            .Select(record => setFeedId(record, feedId))
+            .ToList();
+
+        await repository.AddRangeAsync(records);
+        await repository.SaveChangesAsync();
+
+        Log.Information("Imported {Count} of type {Type} for feed {FeedId}", 
+            records.Count, typeof(T).Name, feedId);
     }
 
-}
-
-
-//TODO move
-public class GtfsFeedResponse
-{
-    public string Id { get; set; }
-    [JsonPropertyName("latest_dataset")]
-    public LatestDataset LatestDataset { get; set; }
-}
-
-public class LatestDataset
-{
-    [JsonPropertyName("hosted_url")]
-    public string HostedUrl { get; set; } 
 }
