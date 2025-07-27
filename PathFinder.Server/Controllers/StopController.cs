@@ -7,7 +7,7 @@ using Serilog;
 namespace PathFinder.Server.Controllers;
 
 [ApiController]
-[Route("/api/test")]
+[Route("/api/stop")]
 public class StopController : ControllerBase
 {
     private readonly IStopService _stopService;
@@ -17,8 +17,8 @@ public class StopController : ControllerBase
         _stopService = stopService;
     }
     
-    [HttpGet("GetFeedStopsById")]
-    public async Task<IActionResult> GetFeedStopsById(string feedId)
+    [HttpGet("{feedId}")]
+    public async Task<IActionResult> GetStopsByFeedId(string feedId)
     {
         try
         {

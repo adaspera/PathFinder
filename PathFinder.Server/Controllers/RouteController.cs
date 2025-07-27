@@ -16,8 +16,8 @@ public class RouteController : ControllerBase
         _routeService = routeService;
     }
     
-    [HttpGet("GetFeedRoutesById")]
-    public async Task<IActionResult> GetFeedRoutesById(string feedId)
+    [HttpGet]
+    public async Task<IActionResult> GetRoutesByFeedId(string feedId)
     {
         try
         {
