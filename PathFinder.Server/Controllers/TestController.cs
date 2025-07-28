@@ -35,7 +35,7 @@ public class TestController : ControllerBase
     {
         try
         {
-            var var = await _mobilityDbService.GetGtfsFeedDownloadUrlAsync(feedId);
+            var var = await _mobilityDbService.GetFeedInfoAsync(feedId);
             return Ok(var);
         }
         catch (Exception e)

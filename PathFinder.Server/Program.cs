@@ -28,6 +28,7 @@ try
     builder.Services.AddScoped<IStopService, StopService>();
     builder.Services.AddScoped<IRouteRepository, RouteRepository>();
     builder.Services.AddScoped<IRouteService, RouteService>();
+    builder.Services.AddScoped<IFeedInfoRepository, FeedInfoRepository>();
 
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();

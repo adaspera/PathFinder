@@ -5,14 +5,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace PathFinder.Server.Models;
 
-[PrimaryKey(nameof(Id), nameof(FeedId))]
 public class Stop
 {
-    [Name("stop_id")]
-    public string Id { get; set; }
+    [Key]
+    public string Id { get; set; } = Guid.NewGuid().ToString();
 
     [Required]
     public string FeedId { get; set; }
+    
+    [ForeignKey(nameof(FeedId))]
+    public FeedInfo? FeedInfo { get; set; }
 
     [Name("stop_name")]
     public string? Name { get; set; }

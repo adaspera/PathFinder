@@ -18,16 +18,19 @@ public class MobilityDbService
     private readonly HttpClient _httpClient;
     private readonly IStopRepository _stopRepository;
     private readonly IRouteRepository _routeRepository;
+    private readonly IFeedInfoRepository _feedInfoRepository;
     private readonly IHttpClientFactory _httpClientFactory;
 
     public MobilityDbService(HttpClient httpClient, IStopRepository stopRepository,
         IRouteRepository routeRepository,
+        IFeedInfoRepository feedInfoRepository,
         IHttpClientFactory httpClientFactory)
     {
         _httpClient = httpClient;
         _stopRepository = stopRepository;
         _routeRepository = routeRepository;
         _httpClientFactory = httpClientFactory;
+        _feedInfoRepository = feedInfoRepository;
     }
     
     public async Task<object?> GetAllFeedsAsync(int limit)
@@ -37,7 +40,7 @@ public class MobilityDbService
 
     public async Task<object?> GetFeedInfoAsync(string feedId)
     {
-        return await _httpClient.GetFromJsonAsync<object>($"feeds/{feedId}");
+        return await _httpClient.GetFromJsonAsync<object>($"v1/feeds/{feedId}");
     }
     
     public async Task<object?> GetMetadata()
@@ -71,12 +74,16 @@ public class MobilityDbService
         using var zipStream = new MemoryStream(zipBytes);
         using var archive = new ZipArchive(zipStream);
         
+        await ProcessGtfsFileAsync<FeedInfo>(archive, "feed_info.txt", feedId, 
+            (feed, fid) => { feed.Id = fid; return feed; }, 
+            _feedInfoRepository);
+        // TODO pasiduodu, pasalinsim reference i FeedInfo is kitu entities
         await ProcessGtfsFileAsync<Stop>(archive, "stops.txt", feedId, 
-            (stop, fid) => { stop.FeedId = fid; return stop; }, 
+            (stop, fid) => { stop.FeedId = fid; stop.FeedInfo = _feedInfoRepository.GetById(fid); return stop; }, 
             _stopRepository);
         
         await ProcessGtfsFileAsync<Models.Route>(archive, "routes.txt", feedId, 
-            (route, fid) => { route.FeedId = fid; return route; }, 
+            (route, fid) => { route.FeedId = fid; route.FeedInfo = _feedInfoRepository.GetById(fid); return route; }, 
             _routeRepository);
     }
     
@@ -106,7 +113,7 @@ public class MobilityDbService
         var records = csv.GetRecords<T>()
             .Select(record => setFeedId(record, feedId))
             .ToList();
-
+        
         await repository.AddRangeAsync(records);
         await repository.SaveChangesAsync();
 

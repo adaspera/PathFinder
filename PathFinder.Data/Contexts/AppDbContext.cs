@@ -10,4 +10,5 @@ public class AppDbContext : DbContext
     public DbSet<Stop> Stops { get; set; }
     public DbSet<Agency> Agencies { get; set; }
     public DbSet<Route> Routes { get; set; }
+    public DbSet<FeedInfo> FeedInfos { get; set; }
 }
