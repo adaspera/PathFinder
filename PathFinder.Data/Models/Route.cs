@@ -5,21 +5,19 @@ using Microsoft.EntityFrameworkCore;
 
 namespace PathFinder.Server.Models;
 
+[PrimaryKey(nameof(Id),nameof(FeedId))]
 public class Route
 {
-    [Key]
-    public string Id { get; set; } = Guid.NewGuid().ToString();
+    [Name("route_id"), Required]
+    public string Id { get; set; }
     
     [Required]
     public string FeedId { get; set; }
-    
-    [ForeignKey(nameof(FeedId))]
-    public FeedInfo? FeedInfo { get; set; }
 
     [Name("agency_id")]
-    public string? AgencyId { get; set; } //TODO problema nes AgencyId is generated
-
-    [ForeignKey(nameof(AgencyId))]
+    public string? AgencyId { get; set; }
+    
+    [ForeignKey($"{nameof(FeedId)}, {nameof(AgencyId)}")]
     public Agency? Agency { get; set; }
 
     [Name("route_short_name")]

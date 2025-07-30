@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using CsvHelper;
 using CsvHelper.Configuration;
 using PathFinder.Data.Schema;
+using PathFinder.Server.Data;
 using PathFinder.Server.Models;
 using PathFinder.Server.Repositories;
 using PathFinder.Server.Repositories.Interfaces;
@@ -16,21 +17,16 @@ namespace PathFinder.Server.Services;
 public class MobilityDbService
 {
     private readonly HttpClient _httpClient;
-    private readonly IStopRepository _stopRepository;
-    private readonly IRouteRepository _routeRepository;
-    private readonly IFeedInfoRepository _feedInfoRepository;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly AppDbContext _dbContext;
 
     public MobilityDbService(HttpClient httpClient, IStopRepository stopRepository,
-        IRouteRepository routeRepository,
-        IFeedInfoRepository feedInfoRepository,
+        AppDbContext dbContext,
         IHttpClientFactory httpClientFactory)
     {
         _httpClient = httpClient;
-        _stopRepository = stopRepository;
-        _routeRepository = routeRepository;
         _httpClientFactory = httpClientFactory;
-        _feedInfoRepository = feedInfoRepository;
+        _dbContext = dbContext;
     }
     
     public async Task<object?> GetAllFeedsAsync(int limit)
@@ -74,31 +70,56 @@ public class MobilityDbService
         using var zipStream = new MemoryStream(zipBytes);
         using var archive = new ZipArchive(zipStream);
         
-        await ProcessGtfsFileAsync<FeedInfo>(archive, "feed_info.txt", feedId, 
-            (feed, fid) => { feed.Id = fid; return feed; }, 
-            _feedInfoRepository);
-        // TODO pasiduodu, pasalinsim reference i FeedInfo is kitu entities
-        await ProcessGtfsFileAsync<Stop>(archive, "stops.txt", feedId, 
-            (stop, fid) => { stop.FeedId = fid; stop.FeedInfo = _feedInfoRepository.GetById(fid); return stop; }, 
-            _stopRepository);
+        try
+        {
+            await ProcessGtfsFileAsync<FeedInfo>(archive, "feed_info.txt", feedId, 
+                (feed, fid) => { feed.Id = fid; return feed; });
         
-        await ProcessGtfsFileAsync<Models.Route>(archive, "routes.txt", feedId, 
-            (route, fid) => { route.FeedId = fid; route.FeedInfo = _feedInfoRepository.GetById(fid); return route; }, 
-            _routeRepository);
+            await ProcessGtfsFileAsync<Stop>(archive, "stops.txt", feedId, 
+                (stop, fid) => { stop.FeedId = fid; return stop; });
+            
+            var agencies = await ProcessGtfsFileAsync<Agency>(archive, "agency.txt", feedId, 
+                (agency, fid) => { agency.FeedId = fid; return agency; });
+        
+            await ProcessGtfsFileAsync<Models.Route>(archive, "routes.txt", feedId, 
+                (route, fid) => { route.FeedId = fid;
+                    route.Agency = agencies.Find(a => a.Id == route.AgencyId);  
+                    return route; });
+        
+            await _dbContext.SaveChangesAsync();
+        
+            Log.Information("Successfully imported feed {FeedId}", feedId);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to import feed {FeedId}", feedId);
+            throw;
+        }
+        
+        // await ProcessGtfsFileAsync<FeedInfo>(archive, "feed_info.txt", feedId, 
+        //     (feed, fid) => { feed.Id = fid; return feed; }, 
+        //     _feedInfoRepository);
+        //
+        // await ProcessGtfsFileAsync<Stop>(archive, "stops.txt", feedId, 
+        //     (stop, fid) => { stop.FeedId = fid; return stop; }, 
+        //     _stopRepository);
+        //
+        // await ProcessGtfsFileAsync<Models.Route>(archive, "routes.txt", feedId, 
+        //     (route, fid) => { route.FeedId = fid; return route; }, 
+        //     _routeRepository);
     }
     
-    private async Task ProcessGtfsFileAsync<T>(
+    private async Task<List<T>?> ProcessGtfsFileAsync<T>(
         ZipArchive archive,
         string fileName,
         string feedId,
-        Func<T, string, T> setFeedId,
-        IBaseRepository<T> repository) where T : class
+        Func<T, string, T> setFeedId) where T : class
     {
         var entry = archive.GetEntry(fileName);
         if (entry == null)
         {
             Log.Warning("File {FileName} not found in GTFS feed", fileName);
-            return;
+            return null;
         }
 
         var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -114,11 +135,12 @@ public class MobilityDbService
             .Select(record => setFeedId(record, feedId))
             .ToList();
         
-        await repository.AddRangeAsync(records);
-        await repository.SaveChangesAsync();
+        await _dbContext.Set<T>().AddRangeAsync(records);
 
         Log.Information("Imported {Count} of type {Type} for feed {FeedId}", 
             records.Count, typeof(T).Name, feedId);
+        
+        return records;
     }
 
 }

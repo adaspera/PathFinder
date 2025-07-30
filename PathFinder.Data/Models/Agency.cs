@@ -5,16 +5,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace PathFinder.Server.Models;
 
+[PrimaryKey(nameof(Id), nameof(FeedId))]
 public class Agency
 {
-    [Key]
-    public string Id { get; set; } = Guid.NewGuid().ToString();
+    [Name("agency_id"), Required]
+    public string Id { get; set; }
     
     [Required]
-    public string FeedId { get; set; }
-    
-    [ForeignKey(nameof(FeedId))]
-    public FeedInfo? FeedInfo { get; set; }
+    public string FeedId { get; set; } = null!;
 
     [Name("agency_name"), Required]
     public string Name { get; set; } = null!;
@@ -30,4 +28,6 @@ public class Agency
 
     [Name("agency_phone")]
     public string? Phone { get; set; }
+    
+    public ICollection<Route>? Routes { get; set; }
 }
