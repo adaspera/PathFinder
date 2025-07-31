@@ -3,7 +3,7 @@ using System.IO.Compression;
 using System.Text.Json.Serialization;
 using CsvHelper;
 using CsvHelper.Configuration;
-using PathFinder.Data.Schema;
+using PathFinder.Data.Models.DTOs;
 using PathFinder.Server.Data;
 using PathFinder.Server.Models;
 using PathFinder.Server.Repositories;
@@ -46,9 +46,16 @@ public class MobilityDbService
 
     public async Task<string?> GetGtfsFeedDownloadUrlAsync(string feedId)
     {
-        var feed = await _httpClient.GetFromJsonAsync<GtfsFeedResponse>($"v1/gtfs_feeds/{feedId}");
+        var feed = await _httpClient.GetFromJsonAsync<GtfsFeedResponseDto>($"v1/gtfs_feeds/{feedId}");
         Log.Information("fetched feed info: {@GtfsFeedResponse}", feed);
         return feed?.LatestDataset?.HostedUrl;
+    }
+    
+    public async Task<List<GtfsFeedResponseDto>?> GetTestGtfsFeedInfoAsync(int limit = 10)
+    {
+        var feeds = await _httpClient.GetFromJsonAsync<List<GtfsFeedResponseDto>>($"v1/gtfs_feeds?limit={limit}");
+        Log.Information("fetched multiple feed info, amount: {@n}", feeds?.Count);
+        return feeds;
     }
     
     public async Task DownloadGtfsFeedAsync(string feedId)
@@ -95,18 +102,6 @@ public class MobilityDbService
             Log.Error(ex, "Failed to import feed {FeedId}", feedId);
             throw;
         }
-        
-        // await ProcessGtfsFileAsync<FeedInfo>(archive, "feed_info.txt", feedId, 
-        //     (feed, fid) => { feed.Id = fid; return feed; }, 
-        //     _feedInfoRepository);
-        //
-        // await ProcessGtfsFileAsync<Stop>(archive, "stops.txt", feedId, 
-        //     (stop, fid) => { stop.FeedId = fid; return stop; }, 
-        //     _stopRepository);
-        //
-        // await ProcessGtfsFileAsync<Models.Route>(archive, "routes.txt", feedId, 
-        //     (route, fid) => { route.FeedId = fid; return route; }, 
-        //     _routeRepository);
     }
     
     private async Task<List<T>?> ProcessGtfsFileAsync<T>(

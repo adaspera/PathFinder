@@ -58,7 +58,7 @@ public class MobilityDbTokenService
 
             response.EnsureSuccessStatusCode();
 
-            var responseData = await response.Content.ReadFromJsonAsync<RefreshTokenResponseDTO>();
+            var responseData = await response.Content.ReadFromJsonAsync<RefreshTokenResponseDto>();
             if (responseData == null)
             {
                 throw new ApplicationException("Invalid response received from the MobilityDb server.");

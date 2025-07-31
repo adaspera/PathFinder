@@ -29,6 +29,9 @@ try
     builder.Services.AddScoped<IRouteRepository, RouteRepository>();
     builder.Services.AddScoped<IRouteService, RouteService>();
     builder.Services.AddScoped<IFeedInfoRepository, FeedInfoRepository>();
+    
+    builder.Services.AddScoped<CitySearchService>(provider => 
+        new CitySearchService(Path.Combine(Environment.CurrentDirectory, "LuceneSearch")));
 
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();

@@ -2,7 +2,7 @@
 
 namespace PathFinder.Server.Models.DTOs;
 
-public class RefreshTokenResponseDTO
+public class RefreshTokenResponseDto
 {
     [JsonPropertyName("access_token")]
     public string AccessToken { get; set; }
