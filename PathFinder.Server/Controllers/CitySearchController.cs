@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using PathFinder.Data.Models.DTOs;
 using PathFinder.Server.Services;
+using Serilog;
 
 namespace PathFinder.Server.Controllers;
 
@@ -17,7 +19,7 @@ public class CitySearchController : ControllerBase
     }
     
     [HttpGet]
-    public IActionResult Search([FromQuery] string query)
+    public IActionResult QuickSearch([FromQuery] string query)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
@@ -28,10 +30,33 @@ public class CitySearchController : ControllerBase
         return Ok(results);
     }
     
+    [HttpGet("advanced")]
+    public async Task<IActionResult> AdvancedSearch([FromQuery] string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return BadRequest();
+        }
+
+        var results = await _mobilityDbService.AdvancedSearchAsync(query);
+        
+        Log.Information("Advanced search found results: {n}", results?.Count);
+        
+        return Ok(results);
+    }
+    
     [HttpPost]
     public async Task<IActionResult> TestLoadSearchIndexes()
     {
         var cities = await _mobilityDbService.GetTestGtfsFeedInfoAsync();
+
+        foreach (var city in cities)
+        {
+            Log.Information("Testing {city}", city.Provider);
+        }
+        
+        if (cities == null) return BadRequest();
+        
         _searchService.IndexCities(cities);
         return Ok();
     }

@@ -58,6 +58,48 @@ public class MobilityDbService
         return feeds;
     }
     
+    public async Task<List<GtfsFeedResponseDto>?> GetGtfsFeedInfoAsync(
+        string provider = null, 
+        string municipality = null, 
+        int limit = 10)
+    {
+        var queryParams = new Dictionary<string, string>
+        {
+            ["limit"] = limit.ToString()
+        };
+
+        if (!string.IsNullOrEmpty(provider))
+        {
+            queryParams["provider"] = provider;
+        }
+
+        if (!string.IsNullOrEmpty(municipality))
+        {
+            queryParams["municipality"] = municipality;
+        }
+
+        var queryString = string.Join("&", queryParams.Select(kvp => $"{kvp.Key}={kvp.Value}"));
+        var requestUri = $"v1/gtfs_feeds?{queryString}";
+        
+        var feeds = await _httpClient.GetFromJsonAsync<List<GtfsFeedResponseDto>>(requestUri);
+        Log.Information("Fetched feed info, count: {@n}", feeds?.Count);
+        return feeds;
+    }
+
+    public async Task<List<GtfsFeedResponseDto>?> AdvancedSearchAsync(string query, int limit = 10)
+    {
+        var providerResults = await GetGtfsFeedInfoAsync(provider: query, limit: limit);
+        var municipalityResults = await GetGtfsFeedInfoAsync(municipality: query, limit: limit);
+        
+        List<GtfsFeedResponseDto> results = new();
+        if (providerResults != null) results.AddRange(providerResults);
+        if (municipalityResults != null) results.AddRange(municipalityResults);
+
+        var uniqueResults = results.DistinctBy(x => x.Id).ToList();
+        
+        return uniqueResults;
+    }
+    
     public async Task DownloadGtfsFeedAsync(string feedId)
     {
         var gtfsUrl= await GetGtfsFeedDownloadUrlAsync(feedId);
